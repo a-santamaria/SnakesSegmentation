@@ -23,8 +23,8 @@ std::vector<Point> Snake::getPoints() {
 void Snake::update() {
     for(int i = 0; i < points.size(); i++) {
         //TODO add image and external forces
-        movedPoints[i].x += internalForce_x(i);
-        movedPoints[i].y += internalForce_y(i);
+        movedPoints[i].x = points[i].x + internalForce_x(i);
+        movedPoints[i].y = points[i].y + internalForce_y(i);
     }
     points = movedPoints;
 }
