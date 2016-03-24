@@ -5,6 +5,8 @@
 #include "point.h"
 
 class Snake {
+private:
+
     double tension;
     double stiffness;
 
@@ -23,16 +25,27 @@ class Snake {
     double threshold;
 
     std::vector<Point> points;
-
+    std::vector<Point> movedPoints;
 public:
-    Snake(double _tension, double _stiffness, double _line_weight,
-            double _edge_weight, double _term_weight) :
-            tension(_tension), stiffness(_stiffness), line_weight(_line_weight),
-            edge_weight(_edge_weight), term_weight(_term_weight) {}
+    Snake();
+    Snake(std::vector<Point> _points, double _tension, double _stiffness);
+    Snake(std::vector<Point> _points, double _tension, double _stiffness,
+            double _line_weight, double _edge_weight, double _term_weight);
+    std::vector<Point> getPoints();
     void update();
 
 private:
-    void internal();
+    double internalForce_x(int i);
+    double internalForce_y(int i);
+
+    //continuity force
+    double elasticForce_x(int i);
+    double elasticForce_y(int i);
+
+    //TODO curvature force
+
+    int getPrevPointId(int i);
+    int getNextPointId(int i);
 };
 
 #endif

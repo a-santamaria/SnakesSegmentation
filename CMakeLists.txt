@@ -66,6 +66,9 @@ INCLUDE_DIRECTORIES(
 ADD_EXECUTABLE(snakesClient snakesClient.cxx point.cxx snakes.cxx)
 TARGET_LINK_LIBRARIES(snakesClient ${VTK_LIBRARIES})
 
+ADD_EXECUTABLE(mouseSnakesC snakesClientMouse.cxx point.cxx snakes.cxx)
+TARGET_LINK_LIBRARIES(mouseSnakesC ${VTK_LIBRARIES})
+
 
 
 ## eof - $RCSfile$

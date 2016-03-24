@@ -25,7 +25,6 @@ using namespace std;
 
 #define maxNum 10000
 
-
 int main( int argc, char* argv[] )
 {
 
