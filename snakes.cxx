@@ -31,26 +31,52 @@ void Snake::update() {
 
 double Snake::internalForce_x(int i) {
     //TODO add curvature
-    return elasticForce_x(i);
+    return tension * continuityForce_x(i) + stiffness * curvatureForce_x(i);
 }
 
 double Snake::internalForce_y(int i) {
     //TODO add curvature
-    return elasticForce_y(i);
+    return tension * continuityForce_y(i) + stiffness * curvatureForce_x(i);
 }
 
-double Snake::elasticForce_x(int i) {
+double Snake::continuityForce_x(int i) {
     int prev = getPrevPointId(i);
     int next = getNextPointId(i);
     double dx2 = ( points[next].x - ( 2.0 * points[i].x ) + points[prev].x );
-    return 2 * tension * dx2 ;
+    //TODO no se si toca por 2
+    return dx2 ;
 }
-
-double Snake::elasticForce_y(int i) {
+//TODO change to continuity
+double Snake::continuityForce_y(int i) {
     int prev = getPrevPointId(i);
     int next = getNextPointId(i);
     double dy2 = ( points[next].y - ( 2.0 * points[i].y ) + points[prev].y );
-    return 2 * tension * dy2 ;
+    //TODO no se si toca por 2
+    return dy2 ;
+}
+
+double Snake::curvatureForce_x(int i) {
+    int prev = getPrevPointId(i);
+    int prev2 = getPrevPointId(prev);
+    int next = getNextPointId(i);
+    int next2 = getNextPointId(next);
+
+    double dx4 = ( - points[prev2].x
+                   + ( 4.0 * ( points[prev].x + points[next].x ) )
+                   - ( 6.0 * points[i].x ) - points[next2].x );
+    return dx4;
+}
+
+double Snake::curvatureForce_y(int i) {
+    int prev = getPrevPointId(i);
+    int prev2 = getPrevPointId(prev);
+    int next = getNextPointId(i);
+    int next2 = getNextPointId(next);
+
+    double dy4 = ( - points[prev2].y
+                   + ( 4.0 * ( points[prev].y + points[next].y ) )
+                   - ( 6.0 * points[i].y ) - points[next2].y );
+    return dy4;
 }
 
 int Snake::getPrevPointId(int i) {

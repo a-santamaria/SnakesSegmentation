@@ -39,10 +39,12 @@ private:
     double internalForce_y(int i);
 
     //continuity force
-    double elasticForce_x(int i);
-    double elasticForce_y(int i);
+    double continuityForce_x(int i);
+    double continuityForce_y(int i);
 
     //TODO curvature force
+    double curvatureForce_x(int i);
+    double curvatureForce_y(int i);
 
     int getPrevPointId(int i);
     int getNextPointId(int i);

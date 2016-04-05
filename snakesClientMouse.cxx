@@ -48,7 +48,7 @@ class customMouseInteractorStyle : public vtkInteractorStyleTrackballCamera
 
 };
 
-void systemPouse() {
+void systemPause() {
     char systemPouse;
     std::cout << "Press key to continue ..." << std::endl;
     std::cin >> systemPouse;
@@ -178,7 +178,7 @@ int main(int, char *[])
         cont++;
     }
 
-    systemPouse();
+    systemPause();
     return EXIT_SUCCESS;
 }
 
