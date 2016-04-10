@@ -16,7 +16,7 @@
 #include <vtkCellArray.h>
 #include <vector>
 #include "point.h"
-#include "snakes.h"
+#include "snakeFilter.h"
 
 
 // Define interaction style

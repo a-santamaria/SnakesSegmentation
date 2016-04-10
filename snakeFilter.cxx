@@ -1,4 +1,4 @@
-#include "snakes.h"
+#include "snakeFilter.h"
 
 Snake::Snake() {}
 

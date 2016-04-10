@@ -17,7 +17,7 @@
 #include <vtkSeedRepresentation.h>
 #include <vtkSeedWidget.h>
 #include <vtkSmartPointer.h>
-#include "snakes.h"
+#include "snakeFilter.h"
 
 
 #define CANVAS_SIZE 500

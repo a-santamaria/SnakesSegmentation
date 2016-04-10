@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "point.h"
-#include "snakes.h"
+#include "snakeFilter.h"
 
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>
