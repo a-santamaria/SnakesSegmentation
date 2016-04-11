@@ -134,14 +134,14 @@ int main( int argc, char* argv[] )
   input_data_actor.Actor->GetProperty( )->SetPointSize( 20 );
 
   // Compute convex hull
-  // vtkSmartPointer< ConvexHullFilter > ch =
-  //   vtkSmartPointer< ConvexHullFilter >::New( );
-  // ch->SetInputData( input_data );
-  // ch->Update( );
+  vtkSmartPointer< SnakeFilter > snake =
+    vtkSmartPointer< SnakeFilter >::New( );
+  snake->SetInputData( input_data );
+  snake->Update( );
 
   // Prepate convex hull diagram visualization
   ActorMiniPipeline ch_actor;
-  // ch_actor.Configure( ch->GetOutput( ) );
+  ch_actor.Configure( snake->GetOutput( ) );
   ch_actor.Actor->GetProperty( )->SetColor( 0, 0, 1 );
   ch_actor.Actor->GetProperty( )->SetLineWidth( 5 );
   ch_actor.Actor->GetProperty( )->SetPointSize( 10 );

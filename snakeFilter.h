@@ -1,10 +1,12 @@
-#ifndef SNAKES_H
-#define SNAKES_H
+#ifndef SNAKE_FILTER_H
+#define SNAKE_FILTER_H
+
+#include <vtkPolyDataAlgorithm.h>
 
 #include <vector>
 #include "point.h"
 
-class Snake {
+class SnakeFilter : public vtkPolyDataAlgorithm {
 private:
 
     double tension;
@@ -26,28 +28,53 @@ private:
 
     std::vector<Point> points;
     std::vector<Point> movedPoints;
+
+
 public:
-    Snake();
-    Snake(std::vector<Point> _points, double _tension, double _stiffness);
-    Snake(std::vector<Point> _points, double _tension, double _stiffness,
-            double _line_weight, double _edge_weight, double _term_weight);
-    std::vector<Point> getPoints();
-    void update();
+    vtkTypeMacro( SnakeFilter,vtkPolyDataAlgorithm );
+
+public:
+    static SnakeFilter* New( );
+
+protected:
+    SnakeFilter( );
+    virtual ~SnakeFilter( );
+
+    // Usual data generation method
+    virtual int RequestData(
+        vtkInformation* request,
+        vtkInformationVector** input,
+        vtkInformationVector* output
+    );
 
 private:
-    double internalForce_x(int i);
-    double internalForce_y(int i);
+    // Purposely not implemented.
+    SnakeFilter( const SnakeFilter& other );
+    void operator=( const SnakeFilter& other );
+
+/**************************************************************/
+public:
+    //SnakeFilter();
+    SnakeFilter(std::vector<Point> _points, double _tension, double _stiffness);
+    SnakeFilter(std::vector<Point> _points, double _tension, double _stiffness,
+            double _line_weight, double _edge_weight, double _term_weight);
+    std::vector<Point> getPoints();
+    //void update();
+
+private:
+    double internalForce_x(int i, vtkPoints* in_points);
+    double internalForce_y(int i, vtkPoints* in_points);
 
     //continuity force
-    double continuityForce_x(int i);
-    double continuityForce_y(int i);
+    double continuityForce_x(int i, vtkPoints* in_points);
+    double continuityForce_y(int i, vtkPoints* in_points);
 
     //TODO curvature force
-    double curvatureForce_x(int i);
-    double curvatureForce_y(int i);
+    double curvatureForce_x(int i, vtkPoints* in_points);
+    double curvatureForce_y(int i, vtkPoints* in_points);
 
-    int getPrevPointId(int i);
-    int getNextPointId(int i);
+    int getPrevPointId(int i, int N);
+    int getNextPointId(int i, int N);
 };
 
 #endif
