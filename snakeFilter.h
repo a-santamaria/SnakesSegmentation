@@ -9,8 +9,8 @@
 class SnakeFilter : public vtkPolyDataAlgorithm {
 private:
 
-    double tension;
-    double stiffness;
+    double tension = 0.001;
+    double stiffness = 0.001;
 
     double line_weight;
     double edge_weight;

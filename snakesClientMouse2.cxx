@@ -139,21 +139,56 @@ int main( int argc, char* argv[] )
   snake->SetInputData( input_data );
   snake->Update( );
 
-  // Prepate convex hull diagram visualization
   ActorMiniPipeline ch_actor;
-  ch_actor.Configure( snake->GetOutput( ) );
+  vtkSmartPointer<vtkPolyData> salida = snake->GetOutput( );
+  ch_actor.Configure( salida );
   ch_actor.Actor->GetProperty( )->SetColor( 0, 0, 1 );
   ch_actor.Actor->GetProperty( )->SetLineWidth( 5 );
   ch_actor.Actor->GetProperty( )->SetPointSize( 10 );
-
-  // Show results
-  ren->AddActor( input_data_actor.Actor );
+  iren->SetRenderWindow( win );
+  //ren->AddActor( input_data_actor.Actor );
   ren->AddActor( ch_actor.Actor );
   iren->Initialize( );
-  ren->ResetCamera( );
+  /*ren->ResetCamera( );
   ren->Render( );
-  seed_wdg->Off( );
-  iren->Start( );
+  */
+  int ii = 0;
+  while( ii < 800 ) {
+      // Compute convex hull
+
+      vtkSmartPointer< SnakeFilter > snake2 =
+        vtkSmartPointer< SnakeFilter >::New( );
+       snake2->SetInputData( salida );
+       snake2->Update();
+
+      // Prepate convex hull diagram visualization
+      ActorMiniPipeline ch_actor;
+
+      for(int i = 0; i < snake2->GetOutput()->GetNumberOfPoints(); i++){
+          double* pos ;
+          pos = snake2->GetOutput()->GetPoint(i);
+          salida->GetPoints()->SetPoint(i, pos);
+      }
+
+      // Show results
+      //salida = snake2->GetOutput( );
+/*
+      ren->AddActor( input_data_actor.Actor );
+      ren->AddActor( ch_actor.Actor );
+      iren->Initialize( );
+      ren->ResetCamera( );
+      ren->Render( );
+      seed_wdg->Off( );
+      iren->Start( );
+*/    seed_wdg->Off( );
+      win->Finalize();
+      win->Start();
+      win->Render();
+      ii++;
+
+  }
+
+  return( 0 );
 
   return( 0 );
 }

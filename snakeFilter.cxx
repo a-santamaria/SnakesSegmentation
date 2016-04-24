@@ -45,12 +45,14 @@ RequestData(
     vtkCellArray* out_lines = vtkCellArray::New( );
     vtkCellArray* out_verts = vtkCellArray::New( );
 
-    double* currP;
+    double currP[3];
+    currP[2] = 0;
     int N = in_points->GetNumberOfPoints( );
-    std::cout << "number of points " << N << std::endl;
+    //std::cout << "number of points " << N << std::endl;
     for(unsigned long i = 0; i < N; i++) {
-        currP = in_points->GetPoint(i);
-        std::cout << "curr " << currP[0] << " " << currP[1] << std::endl;
+        currP[0] = in_points->GetPoint(i)[0];
+        currP[1] = in_points->GetPoint(i)[1];
+        //std::cout << "curr " << currP[0] << " " << currP[1] << std::endl;
         //TODO add image and external forces
         currP[0] += internalForce_x(i, in_points);
         currP[1] += internalForce_y(i, in_points);
@@ -75,7 +77,7 @@ RequestData(
     out->SetPoints( out_points );
     out->SetLines( out_lines );
     out->SetVerts( out_verts );
-
+    return 1;
 }
 
 SnakeFilter::SnakeFilter(std::vector<Point> _points, double _tension, double _stiffness) :
@@ -120,11 +122,11 @@ double SnakeFilter::continuityForce_x(int i, vtkPoints* in_points) {
     int prev = getPrevPointId(i, N);
     int next = getNextPointId(i, N);
 
-    double* pointPrev = in_points->GetPoint(prev);
-    double* pointCurr = in_points->GetPoint(i);
-    double* pointNext = in_points->GetPoint(next);
+    double pointPrev = in_points->GetPoint(prev)[0];
+    double pointCurr = in_points->GetPoint(i)[0];
+    double pointNext = in_points->GetPoint(next)[0];
 
-    double dx2 = ( pointNext[0] - ( 2.0 * pointCurr[0] ) + pointPrev[0] );
+    double dx2 = ( pointNext - ( 2.0 * pointCurr ) + pointPrev );
     //TODO no se si toca por 2
     return dx2 ;
 }
@@ -134,11 +136,11 @@ double SnakeFilter::continuityForce_y(int i, vtkPoints* in_points) {
     int prev = getPrevPointId(i, N);
     int next = getNextPointId(i, N);
 
-    double* pointPrev = in_points->GetPoint(prev);
-    double* pointCurr = in_points->GetPoint(i);
-    double* pointNext = in_points->GetPoint(next);
+    double pointPrev = in_points->GetPoint(prev)[1];
+    double pointCurr = in_points->GetPoint(i)[1];
+    double pointNext = in_points->GetPoint(next)[1];
 
-    double dy2 = ( pointNext[1] - ( 2.0 * pointCurr[1] ) + pointPrev[1] );
+    double dy2 = ( pointNext - ( 2.0 * pointCurr ) + pointPrev );
     //TODO no se si toca por 2
     return dy2 ;
 }
@@ -150,15 +152,15 @@ double SnakeFilter::curvatureForce_x(int i, vtkPoints* in_points) {
     int next = getNextPointId(i, N);
     int next2 = getNextPointId(next, N);
 
-    double* pointPrev = in_points->GetPoint(prev);
-    double* pointPrev2 = in_points->GetPoint(prev2);
-    double* pointCurr = in_points->GetPoint(i);
-    double* pointNext = in_points->GetPoint(next);
-    double* pointNext2 = in_points->GetPoint(next2);
+    double pointPrev = in_points->GetPoint(prev)[0];
+    double pointPrev2 = in_points->GetPoint(prev2)[0];
+    double pointCurr = in_points->GetPoint(i)[0];
+    double pointNext = in_points->GetPoint(next)[0];
+    double pointNext2 = in_points->GetPoint(next2)[0];
 
-    double dx4 = ( - pointPrev2[0]
-                   + ( 4.0 * ( pointPrev[0] + pointNext[0] ) )
-                   - ( 6.0 * pointCurr[0] ) - pointNext2[0] );
+    double dx4 = ( - pointPrev2
+                   + ( 4.0 * ( pointPrev + pointNext ) )
+                   - ( 6.0 * pointCurr ) - pointNext2 );
     return dx4;
 }
 
@@ -169,15 +171,15 @@ double SnakeFilter::curvatureForce_y(int i, vtkPoints* in_points) {
     int next = getNextPointId(i, N);
     int next2 = getNextPointId(next, N);
 
-    double* pointPrev = in_points->GetPoint(prev);
-    double* pointPrev2 = in_points->GetPoint(prev2);
-    double* pointCurr = in_points->GetPoint(i);
-    double* pointNext = in_points->GetPoint(next);
-    double* pointNext2 = in_points->GetPoint(next2);
+    double pointPrev = in_points->GetPoint(prev)[1];
+    double pointPrev2 = in_points->GetPoint(prev2)[1];
+    double pointCurr = in_points->GetPoint(i)[1];
+    double pointNext = in_points->GetPoint(next)[1];
+    double pointNext2 = in_points->GetPoint(next2)[1];
 
-    double dy4 = ( - pointPrev2[1]
-                   + ( 4.0 * ( pointPrev[1] + pointNext[1] ) )
-                   - ( 6.0 * pointCurr[1] ) - pointNext2[1] );
+    double dy4 = ( - pointPrev2
+                   + ( 4.0 * ( pointPrev + pointNext ) )
+                   - ( 6.0 * pointCurr ) - pointNext2 );
     return  dy4;
 }
 
