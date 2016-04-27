@@ -193,6 +193,7 @@ int main( int argc, char* argv[] )
     seed_wdg->On( );
     iren->Start( );
 
+
     // 7. Create input polydata
     vtkSmartPointer< vtkPoints > input_points =
     vtkSmartPointer< vtkPoints >::New( );
@@ -218,7 +219,7 @@ int main( int argc, char* argv[] )
     input_data_actor.Actor->GetProperty( )->SetColor( 0, 1, 0 );
     input_data_actor.Actor->GetProperty( )->SetPointSize( 20 );
 
-    // Compute convex hull
+    // Compute snake
     vtkSmartPointer< SnakeFilter > snake =
     vtkSmartPointer< SnakeFilter >::New( );
     snake->SetInputData( input_data );
@@ -230,10 +231,17 @@ int main( int argc, char* argv[] )
     snake_actor.Actor->GetProperty( )->SetColor( 0, 0, 1 );
     snake_actor.Actor->GetProperty( )->SetLineWidth( 5 );
     snake_actor.Actor->GetProperty( )->SetPointSize( 10 );
-    iren->SetRenderWindow( win );
+
+    vtkSmartPointer< vtkRenderer > ren2 = vtkSmartPointer< vtkRenderer >::New();
+    ren2->AddActor( snake_actor.Actor );
+    ren2->AddActor( canvas_actor );
+    win->RemoveRenderer( ren );
+    win->AddRenderer( ren2 );
+    win->Render();
+    //iren->SetRenderWindow( win );
     //ren->AddActor( input_data_actor.Actor );
-    ren->AddActor( snake_actor.Actor );
-    iren->Initialize( );
+    //ren->AddActor( snake_actor.Actor );
+    //iren->Initialize( );
     /*ren->ResetCamera( );
     ren->Render( );
     */
@@ -265,10 +273,16 @@ int main( int argc, char* argv[] )
         ren->Render( );
         seed_wdg->Off( );
         iren->Start( );
-        */    seed_wdg->Off( );
-        //ren->Render( );
-        win->Finalize();
-        win->Start();
+        */
+        win->RemoveRenderer( ren2 );
+        win->AddRenderer( ren2 );
+
+        win->Render();
+        //ren2->Render();
+        // seed_wdg->Off( );
+        // //ren->Render( );
+        // win->Finalize();
+        // win->Start();
         ii++;
     }
 

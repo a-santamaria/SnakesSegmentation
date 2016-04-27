@@ -88,7 +88,7 @@ INCLUDE_DIRECTORIES(
 #ADD_EXECUTABLE(mouseSnakesC snakesClientMouse.cxx point.cxx snakeFilter.cxx)
 #TARGET_LINK_LIBRARIES(mouseSnakesC ${VTK_LIBRARIES})
 
-ADD_EXECUTABLE(snakeClientMouse snakesClientMouse2.cxx point.cxx snakeFilter.cxx)
+ADD_EXECUTABLE(snakeClientMouse MACOSX_BUNDLE snakesClientMouse2.cxx point.cxx snakeFilter.cxx)
 TARGET_LINK_LIBRARIES(snakeClientMouse ${VTK_LIBRARIES})
 
 
