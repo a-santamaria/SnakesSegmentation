@@ -181,13 +181,10 @@ int main( int argc, char* argv[] )
         seed_wdg->Off( );
         iren->Start( );
         */    seed_wdg->Off( );
-        ren->Render( );
-        /*
+        //ren->Render( );
         win->Finalize();
         win->Start();
-        win->Render();
         ii++;
-        */
     }
 
     return( 0 );
