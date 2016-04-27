@@ -17,6 +17,12 @@
 #include <vtkSeedRepresentation.h>
 #include <vtkSeedWidget.h>
 #include <vtkSmartPointer.h>
+
+#include <vtkJPEGReader.h>
+#include <vtkImageRGBToHSV.h>
+#include <vtkImageGradient.h>
+#include <vtkImageExtractComponents.h>
+
 #include "snakeFilter.h"
 
 
@@ -39,23 +45,70 @@ struct ActorMiniPipeline
 // -------------------------------------------------------------------------
 int main( int argc, char* argv[] )
 {
-    // 1. Create a drawing canvas
-    vtkSmartPointer< vtkImageData > canvas =
-    vtkSmartPointer< vtkImageData >::New( );
-    canvas->SetExtent( 0, CANVAS_SIZE, 0, CANVAS_SIZE, 0, 0 );
+    //read image
+    vtkSmartPointer<vtkImageData> originalImage =
+        vtkSmartPointer<vtkImageData>::New();
+    vtkSmartPointer<vtkImageData> image =
+        vtkSmartPointer<vtkImageData>::New();
+
+    // Verify input arguments
+    if ( argc < 2 )
+    {
+        std::cout << "Usage: " << argv[0]
+              << " Filename(.png)" << std::endl;
+              return EXIT_FAILURE;
+    }
+
+    // Read the image
+    vtkSmartPointer<vtkJPEGReader> reader =
+    vtkSmartPointer<vtkJPEGReader>::New();
+    reader->SetFileName(argv[1]);
+
+    // Convert to HSV and extract the Value
+    vtkSmartPointer<vtkImageRGBToHSV> hsvFilter =
+      vtkSmartPointer<vtkImageRGBToHSV>::New();
+    hsvFilter->SetInputConnection(reader->GetOutputPort());
+
+    vtkSmartPointer<vtkImageExtractComponents> extractValue =
+      vtkSmartPointer<vtkImageExtractComponents>::New();
+    extractValue->SetInputConnection(hsvFilter->GetOutputPort());
+    extractValue->SetComponents(2);
+    extractValue->Update();
+    image = extractValue->GetOutput();
+
+    reader->Update();
+
+    vtkSmartPointer< vtkImageData > canvas = vtkSmartPointer< vtkImageData >::New();
+
+    originalImage = reader->GetOutput();
+    int* dims = originalImage->GetDimensions();
+    int extent[6];
+    double origin[3];
+    double spacing[3];
+    originalImage->GetOrigin( origin );
+    originalImage->GetSpacing( spacing );
+    originalImage->GetExtent( extent );
+    std::cout << "dims " << dims[0] << " "<<dims[1] << " "<<dims[2] << std::endl;
+    canvas->SetExtent( 0, dims[0], 0, dims[1], 0, 0 );
     canvas->AllocateScalars( VTK_UNSIGNED_CHAR, 4 );
-    for( unsigned int i = 0; i < CANVAS_SIZE; ++i )
+    for( unsigned int i = 0; i < dims[0]; ++i )
     {
-    for( unsigned int j = 0; j < CANVAS_SIZE; ++j )
-    {
-      canvas->SetScalarComponentFromFloat( i, j, 0, 0, 100 );
-      canvas->SetScalarComponentFromFloat( i, j, 0, 1, 100 );
-      canvas->SetScalarComponentFromFloat( i, j, 0, 2, 100 );
-      canvas->SetScalarComponentFromFloat( i, j, 0, 3, 128 );
-
+        for( unsigned int j = 0; j < dims[1]; ++j )
+        {
+        //   canvas->SetScalarComponentFromFloat( i, j, 0, 0, 100 );
+        //   canvas->SetScalarComponentFromFloat( i, j, 0, 1, 100 );
+        //   canvas->SetScalarComponentFromFloat( i, j, 0, 2, 100 );
+        //   canvas->SetScalarComponentFromFloat( i, j, 0, 3, 128 );
+          int pixel = originalImage->GetScalarComponentAsDouble(i, j, 0, 0);
+          canvas->SetScalarComponentFromFloat( i, j, 0, 0, pixel );
+          canvas->SetScalarComponentFromFloat( i, j, 0, 1, pixel );
+          canvas->SetScalarComponentFromFloat( i, j, 0, 2, pixel );
+          canvas->SetScalarComponentFromFloat( i, j, 0, 3, 255 );
+          //std::cout << pixel << std::endl;
+        } // rof
     } // rof
 
-    } // rof
+
     vtkSmartPointer< vtkImageActor > canvas_actor =
     vtkSmartPointer< vtkImageActor >::New( );
     canvas_actor->GetMapper( )->SetInputData( canvas );
