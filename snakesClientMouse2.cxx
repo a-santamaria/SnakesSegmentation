@@ -98,9 +98,9 @@ int main( int argc, char* argv[] )
 
     double xRange[2];
     extractXFilter->Update();
-    vtkDataArray* dataArray = extractXFilter->GetOutput()->GetPointData()->GetScalars();
-    dataArray->GetRange( xRange );
-    int nT = dataArray->GetNumberOfTuples();
+    vtkDataArray* xGradient = extractXFilter->GetOutput()->GetPointData()->GetScalars();
+    xGradient->GetRange( xRange );
+    int nT = xGradient->GetNumberOfTuples();
     std::cout << "range " << xRange[0] << " " << xRange[1] << std::endl;
     std::cout << "numer of tuples " << nT << std::endl;
     /*for(int i = 0; i < nT; i++){

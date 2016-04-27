@@ -26,6 +26,9 @@ private:
 
     double threshold;
 
+    vtkDataArray* xGradient;
+    vtkDataArray* yGradient;
+
     std::vector<Point> points;
     std::vector<Point> movedPoints;
 
@@ -59,6 +62,7 @@ public:
     SnakeFilter(std::vector<Point> _points, double _tension, double _stiffness,
             double _line_weight, double _edge_weight, double _term_weight);
     std::vector<Point> getPoints();
+    void setGradientComponents(vtkDataArray* x, vtkDataArray* y);
     //void update();
 
 private:

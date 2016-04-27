@@ -183,6 +183,11 @@ double SnakeFilter::curvatureForce_y(int i, vtkPoints* in_points) {
     return  dy4;
 }
 
+void SnakeFilter::setGradientComponents(vtkDataArray* x, vtkDataArray* y) {
+    xGradient = x;
+    yGradient = y;
+}
+
 int SnakeFilter::getPrevPointId(int i, int N) {
     if(i-1 == -1) return N-1;
     else         return i-1;
