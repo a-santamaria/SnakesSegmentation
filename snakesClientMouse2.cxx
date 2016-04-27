@@ -76,6 +76,13 @@ int main( int argc, char* argv[] )
     extractValue->Update();
     image = extractValue->GetOutput();
 
+    // Compute the gradient of the Value
+    vtkSmartPointer<vtkImageGradient> gradientFilter =
+        vtkSmartPointer<vtkImageGradient>::New();
+    gradientFilter->SetInputData(image);
+    gradientFilter->SetDimensionality(2);
+    gradientFilter->Update();
+
     reader->Update();
 
     vtkSmartPointer< vtkImageData > canvas = vtkSmartPointer< vtkImageData >::New();
