@@ -22,6 +22,8 @@
 #include <vtkImageRGBToHSV.h>
 #include <vtkImageGradient.h>
 #include <vtkImageExtractComponents.h>
+#include <vtkPointData.h>
+#include <vtkDataArray.h>
 
 #include "snakeFilter.h"
 
@@ -79,16 +81,39 @@ int main( int argc, char* argv[] )
     // Compute the gradient of the Value
     vtkSmartPointer<vtkImageGradient> gradientFilter =
         vtkSmartPointer<vtkImageGradient>::New();
+    /*const char resultName[] = "resultGrad";
+    gradientFilter->SetResultArrayName(resultName);
+    */
     gradientFilter->SetInputData(image);
     gradientFilter->SetDimensionality(2);
     gradientFilter->Update();
+
+    vtkImageData* outputGradient = gradientFilter->GetOutput();
+
+    // Extract the x component of the gradient
+    vtkSmartPointer<vtkImageExtractComponents> extractXFilter =
+        vtkSmartPointer<vtkImageExtractComponents>::New();
+    extractXFilter->SetComponents(0);
+    extractXFilter->SetInputConnection(gradientFilter->GetOutputPort());
+
+    double xRange[2];
+    extractXFilter->Update();
+    vtkDataArray* dataArray = extractXFilter->GetOutput()->GetPointData()->GetScalars();
+    dataArray->GetRange( xRange );
+    int nT = dataArray->GetNumberOfTuples();
+    std::cout << "range " << xRange[0] << " " << xRange[1] << std::endl;
+    std::cout << "numer of tuples " << nT << std::endl;
+    /*for(int i = 0; i < nT; i++){
+        std::cout << dataArray->GetTuple1(i) << std::endl;
+    }*/
+
 
     reader->Update();
 
     vtkSmartPointer< vtkImageData > canvas = vtkSmartPointer< vtkImageData >::New();
 
     originalImage = reader->GetOutput();
-    int* dims = originalImage->GetDimensions();
+    int* dims = outputGradient->GetDimensions();
     int extent[6];
     double origin[3];
     double spacing[3];
