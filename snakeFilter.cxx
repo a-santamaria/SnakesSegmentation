@@ -54,8 +54,8 @@ RequestData(
         currP[1] = in_points->GetPoint(i)[1];
         //std::cout << "curr " << currP[0] << " " << currP[1] << std::endl;
         //TODO add image and external forces
-        currP[0] += internalForce_x(i, in_points);
-        currP[1] += internalForce_y(i, in_points);
+        currP[0] += internalForce_x(i, in_points) + imageForce_x(i, in_points);
+        currP[1] += internalForce_y(i, in_points) + imageForce_y(i, in_points);
 
         out_points->InsertNextPoint(currP);
     }
@@ -97,16 +97,7 @@ SnakeFilter::SnakeFilter(std::vector<Point> _points, double _tension, double _st
 std::vector<Point> SnakeFilter::getPoints() {
     return points;
 }
-/*
-void SnakeFilter::update() {
-    for(int i = 0; i < points.size(); i++) {
-        //TODO add image and external forces
-        movedPoints[i].x = points[i].x + internalForce_x(i);
-        movedPoints[i].y = points[i].y + internalForce_y(i);
-    }
-    points = movedPoints;
-}
-*/
+
 double SnakeFilter::internalForce_x(int i, vtkPoints* in_points) {
     return  tension   * continuityForce_x(i, in_points) +
             stiffness * curvatureForce_x(i, in_points);
@@ -188,6 +179,11 @@ void SnakeFilter::setGradientComponents(vtkDataArray* x, vtkDataArray* y) {
     yGradient = y;
 }
 
+void SnakeFilter::setImageSize(int height, int width) {
+    imageHeight = height;
+    imageWidth = width;
+}
+
 int SnakeFilter::getPrevPointId(int i, int N) {
     if(i-1 == -1) return N-1;
     else         return i-1;
@@ -195,4 +191,33 @@ int SnakeFilter::getPrevPointId(int i, int N) {
 
 int SnakeFilter::getNextPointId(int i, int N) {
     return (i+1) % N;
+}
+
+double SnakeFilter::imageForce_x(int i, vtkPoints* in_points) {
+    return line_weight * getImageGradient_x(i, in_points);
+}
+
+double SnakeFilter::imageForce_y(int i, vtkPoints* in_points) {
+    return line_weight * getImageGradient_y(i, in_points);
+}
+
+double SnakeFilter::getImageGradient_x(int i, vtkPoints* in_points) {
+    double x = in_points->GetPoint(i)[0];
+    double y = in_points->GetPoint(i)[1];
+    int id = getIdImageAt( round(x), round(y) );
+    assert(id < 65536);
+    return xGradient->GetTuple1(id);
+}
+
+double SnakeFilter::getImageGradient_y(int i, vtkPoints* in_points) {
+    double x = in_points->GetPoint(i)[0];
+    double y = in_points->GetPoint(i)[1];
+    int id = getIdImageAt( round(x), round(y) );
+    assert(id < 65536);
+    return yGradient->GetTuple1(id);
+}
+
+int SnakeFilter::getIdImageAt(int x, int y) {
+    //TODO revisar que no se pase
+    return (y * imageWidth) + x;
 }

@@ -95,17 +95,22 @@ int main( int argc, char* argv[] )
         vtkSmartPointer<vtkImageExtractComponents>::New();
     extractXFilter->SetComponents(0);
     extractXFilter->SetInputConnection(gradientFilter->GetOutputPort());
-
-    double xRange[2];
     extractXFilter->Update();
     vtkDataArray* xGradient = extractXFilter->GetOutput()->GetPointData()->GetScalars();
-    xGradient->GetRange( xRange );
-    int nT = xGradient->GetNumberOfTuples();
-    std::cout << "range " << xRange[0] << " " << xRange[1] << std::endl;
-    std::cout << "numer of tuples " << nT << std::endl;
-    /*for(int i = 0; i < nT; i++){
-        std::cout << dataArray->GetTuple1(i) << std::endl;
-    }*/
+
+    // Extract the y component of the gradient
+    vtkSmartPointer<vtkImageExtractComponents> extractYFilter =
+        vtkSmartPointer<vtkImageExtractComponents>::New();
+    extractYFilter->SetComponents(1);
+    extractYFilter->SetInputConnection(gradientFilter->GetOutputPort());
+    extractYFilter->Update();
+    vtkDataArray* yGradient = extractYFilter->GetOutput()->GetPointData()->GetScalars();
+
+    // double xRange[2];
+    // xGradient->GetRange( xRange );
+    // int nT = xGradient->GetNumberOfTuples();
+    // std::cout << "range " << xRange[0] << " " << xRange[1] << std::endl;
+    // std::cout << "numer of tuples " << nT << std::endl;
 
 
     reader->Update();
@@ -222,6 +227,8 @@ int main( int argc, char* argv[] )
     // Compute snake
     vtkSmartPointer< SnakeFilter > snake =
     vtkSmartPointer< SnakeFilter >::New( );
+    snake->setGradientComponents(xGradient, yGradient);
+    snake->setImageSize(dims[0], dims[1]);
     snake->SetInputData( input_data );
     snake->Update( );
 
@@ -251,6 +258,8 @@ int main( int argc, char* argv[] )
 
         vtkSmartPointer< SnakeFilter > snake2 =
         vtkSmartPointer< SnakeFilter >::New( );
+        snake2->setGradientComponents(xGradient, yGradient);
+        snake2->setImageSize(dims[0], dims[1]);
         snake2->SetInputData( salida );
         snake2->Update();
 
