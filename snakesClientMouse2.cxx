@@ -19,6 +19,7 @@
 #include <vtkSmartPointer.h>
 
 #include <vtkJPEGReader.h>
+#include <vtkPNGReader.h>
 #include <vtkImageRGBToHSV.h>
 #include <vtkImageGradient.h>
 #include <vtkImageExtractComponents.h>
@@ -57,19 +58,32 @@ int main( int argc, char* argv[] )
     if ( argc < 2 )
     {
         std::cout << "Usage: " << argv[0]
-              << " Filename(.png)" << std::endl;
+              << " Filename(.png .jpg)" << std::endl;
               return EXIT_FAILURE;
     }
 
     // Read the image
-    vtkSmartPointer<vtkJPEGReader> reader =
+    vtkSmartPointer<vtkJPEGReader> readerJPG =
     vtkSmartPointer<vtkJPEGReader>::New();
-    reader->SetFileName(argv[1]);
+    vtkSmartPointer<vtkPNGReader> readerPNG =
+    vtkSmartPointer<vtkPNGReader>::New();
+    int tam = strlen(argv[1]);
+    if(argv[1][tam-3] == 'j')
+        readerJPG->SetFileName(argv[1]);
+    else if (argv[1][tam-3] == 'p')
+        readerPNG->SetFileName(argv[1]);
+    else {
+        std::cerr << "wrong extention most be jpg or png" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     // Convert to HSV and extract the Value
     vtkSmartPointer<vtkImageRGBToHSV> hsvFilter =
-      vtkSmartPointer<vtkImageRGBToHSV>::New();
-    hsvFilter->SetInputConnection(reader->GetOutputPort());
+        vtkSmartPointer<vtkImageRGBToHSV>::New();
+    if(argv[1][tam-3] == 'j')
+        hsvFilter->SetInputConnection(readerJPG->GetOutputPort());
+    else
+        hsvFilter->SetInputConnection(readerPNG->GetOutputPort());
 
     vtkSmartPointer<vtkImageExtractComponents> extractValue =
       vtkSmartPointer<vtkImageExtractComponents>::New();
@@ -113,11 +127,16 @@ int main( int argc, char* argv[] )
     // std::cout << "numer of tuples " << nT << std::endl;
 
 
-    reader->Update();
+    if(argv[1][tam-3] == 'j') readerJPG->Update();
+    else                      readerPNG->Update();
 
     vtkSmartPointer< vtkImageData > canvas = vtkSmartPointer< vtkImageData >::New();
 
-    originalImage = reader->GetOutput();
+    if(argv[1][tam-3] == 'j')
+        originalImage = readerJPG->GetOutput();
+    else
+        originalImage = readerPNG->GetOutput();
+
     int* dims = outputGradient->GetDimensions();
     int extent[6];
     double origin[3];

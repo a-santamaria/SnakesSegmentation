@@ -14,7 +14,7 @@ private:
     double tension = 0.001;
     double stiffness = 0.001;
 
-    double line_weight = 1;
+    double line_weight = 0.1;
     double edge_weight;
     double term_weight;
 
