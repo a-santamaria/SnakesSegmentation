@@ -28,27 +28,10 @@
 #include <vtkCallbackCommand.h>
 
 #include "snakeFilter.h"
-
+#include "snakeObserver.h"
 
 #define CANVAS_SIZE 500
 
-// -------------------------------------------------------------------------
-struct ActorMiniPipeline
-{
-    vtkSmartPointer< vtkPolyDataMapper > Mapper;
-    vtkSmartPointer< vtkActor > Actor;
-    void Configure( vtkPolyData* data )
-    {
-        this->Mapper = vtkSmartPointer< vtkPolyDataMapper >::New( );
-        this->Actor = vtkSmartPointer< vtkActor >::New( );
-        this->Mapper->SetInputData( data );
-        this->Actor->SetMapper( this->Mapper );
-    }
-};
-
-void CallbackFunction(vtkObject* caller,
-                long unsigned int eventId,
-                void* clientData, void* callData );
 // -------------------------------------------------------------------------
 int main( int argc, char* argv[] )
 {
@@ -252,7 +235,8 @@ int main( int argc, char* argv[] )
 
     vtkSmartPointer<vtkCallbackCommand> callback =
         vtkSmartPointer<vtkCallbackCommand>::New();
-    callback->SetCallback(CallbackFunction);
+    SnakeObserver* sObserver = new SnakeObserver(canvas_actor);
+    callback->SetCallback(sObserver->CallbackFunction);
     snake->AddObserver( snake->RefreshEvent, callback );
     snake->Update( );
     /*
@@ -324,38 +308,4 @@ int main( int argc, char* argv[] )
 }
 
 
-void CallbackFunction(vtkObject* caller,
-                long unsigned int eventId,
-                void* clientData, void* callData )
-{
-  std::cout << "CallbackFunction called." << std::endl;
-  std::cout << "id " << eventId << std::endl;
-  std::cout << "client data " << ((SnakeFilter*)caller)->RefreshEvent << std::endl;
-
-    SnakeFilter* snake = (SnakeFilter*)caller;
-    ActorMiniPipeline snake_actor;
-    vtkSmartPointer<vtkPolyData> salida = snake->GetOutput( );
-    snake_actor.Configure( salida );
-    snake_actor.Actor->GetProperty( )->SetColor( 0, 0, 1 );
-    snake_actor.Actor->GetProperty( )->SetLineWidth( 5 );
-    snake_actor.Actor->GetProperty( )->SetPointSize( 10 );
-
-    vtkSmartPointer< vtkRenderer > ren2 = vtkSmartPointer< vtkRenderer >::New();
-    ren2->AddActor( snake_actor.Actor );
-
-    vtkSmartPointer< vtkRenderWindow > win =
-    vtkSmartPointer< vtkRenderWindow >::New( );
-    win->AddRenderer( ren2 );
-    win->Render();
-
-    int nn;
-    cin>>nn;
-    //iren->SetRenderWindow( win );
-    //ren->AddActor( input_data_actor.Actor );
-    //ren->AddActor( snake_actor.Actor );
-    //iren->Initialize( );
-    /*ren->ResetCamera( );
-    ren->Render( );
-    */
-}
 // eof - main.cxx

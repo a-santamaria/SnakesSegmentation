@@ -36,55 +36,62 @@ RequestData(
     vtkPolyData* in = vtkPolyData::SafeDownCast(
         input_info->Get( vtkDataObject::DATA_OBJECT( ) )
         );
-    vtkPoints* in_points = in->GetPoints( );
+    vtkSmartPointer<vtkPoints> in_points = in->GetPoints( );
 
     // Get output
     vtkInformation* output_info = output->GetInformationObject( 0 );
-    vtkPolyData* out = vtkPolyData::SafeDownCast(
+    vtkSmartPointer<vtkPolyData> out = vtkPolyData::SafeDownCast(
         output_info->Get( vtkDataObject::DATA_OBJECT( ) )
         );
 
     // Real output objects
-    vtkPoints* out_points = vtkPoints::New( );
-    vtkCellArray* out_lines = vtkCellArray::New( );
-    vtkCellArray* out_verts = vtkCellArray::New( );
+    vtkSmartPointer<vtkPoints> out_points;
+    vtkSmartPointer<vtkCellArray> out_lines;
+    vtkSmartPointer<vtkCellArray> out_verts;
 
     double currP[3];
     currP[2] = 0;
     int N = in_points->GetNumberOfPoints( );
-    //std::cout << "number of points " << N << std::endl;
-    for(unsigned long i = 0; i < N; i++) {
-        currP[0] = in_points->GetPoint(i)[0];
-        currP[1] = in_points->GetPoint(i)[1];
-        //std::cout << "curr " << currP[0] << " " << currP[1] << std::endl;
-        //TODO add image and external forces
-        currP[0] += internalForce_x(i, in_points) + imageForce_x(i, in_points);
-        currP[1] += internalForce_y(i, in_points) + imageForce_y(i, in_points);
+    int ii = 0;
+    //TODO cambiar para que sea con promedio de movimiento
+    while( ii < 800 ) {
+        out_points = vtkPoints::New( );
+        out_lines = vtkCellArray::New( );
+        out_verts = vtkCellArray::New( );
+        for(unsigned long i = 0; i < N; i++) {
+            currP[0] = in_points->GetPoint(i)[0];
+            currP[1] = in_points->GetPoint(i)[1];
+            //std::cout << "curr " << currP[0] << " " << currP[1] << std::endl;
+            //TODO add image and external forces
+            currP[0] += internalForce_x(i, in_points) + imageForce_x(i, in_points);
+            currP[1] += internalForce_y(i, in_points) + imageForce_y(i, in_points);
 
-        out_points->InsertNextPoint(currP);
-    }
+            out_points->InsertNextPoint(currP);
+        }
 
 
 
-    for( unsigned int i = 0; i < N - 1; ++i ) {
-        out_verts->InsertNextCell( 1 );
-        out_verts->InsertCellPoint( i );
+        for( unsigned int i = 0; i < N - 1; ++i ) {
+            out_verts->InsertNextCell( 1 );
+            out_verts->InsertCellPoint( i );
 
+            out_lines->InsertNextCell( 2 );
+            out_lines->InsertCellPoint( i );
+            out_lines->InsertCellPoint( i+1 );
+
+        }
         out_lines->InsertNextCell( 2 );
-        out_lines->InsertCellPoint( i );
-        out_lines->InsertCellPoint( i+1 );
+        out_lines->InsertCellPoint( (unsigned int)(N-1) );
+        out_lines->InsertCellPoint( (unsigned int)0 );
 
+
+        out->SetPoints( out_points );
+        out->SetLines( out_lines );
+        out->SetVerts( out_verts );
+        this->InvokeEvent(this->RefreshEvent, NULL);
+        in_points = out_points;
+        ii++;
     }
-    out_lines->InsertNextCell( 2 );
-    out_lines->InsertCellPoint( (unsigned int)(N-1) );
-    out_lines->InsertCellPoint( (unsigned int)0 );
-
-
-    out->SetPoints( out_points );
-    out->SetLines( out_lines );
-    out->SetVerts( out_verts );
-
-    this->InvokeEvent(this->RefreshEvent, NULL);
     return 1;
 }
 
