@@ -5,6 +5,7 @@
 #include <vtkInformationVector.h>
 #include <vtkPoints.h>
 #include <vtkSmartPointer.h>
+#include <vtkCommand.h>
 
 // -------------------------------------------------------------------------
 SnakeFilter* SnakeFilter::
@@ -14,7 +15,10 @@ New( ) {
 
 // -------------------------------------------------------------------------
 SnakeFilter::
-SnakeFilter( ) : vtkPolyDataAlgorithm( ) {}
+SnakeFilter( ) : vtkPolyDataAlgorithm( )
+{
+    this->RefreshEvent = vtkCommand::UserEvent - 1;
+}
 
 // -------------------------------------------------------------------------
 SnakeFilter::~SnakeFilter( ) {}
@@ -60,6 +64,8 @@ RequestData(
         out_points->InsertNextPoint(currP);
     }
 
+
+
     for( unsigned int i = 0; i < N - 1; ++i ) {
         out_verts->InsertNextCell( 1 );
         out_verts->InsertCellPoint( i );
@@ -77,6 +83,8 @@ RequestData(
     out->SetPoints( out_points );
     out->SetLines( out_lines );
     out->SetVerts( out_verts );
+
+    this->InvokeEvent(this->RefreshEvent, NULL);
     return 1;
 }
 
