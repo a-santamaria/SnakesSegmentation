@@ -18,6 +18,7 @@ SnakeFilter::
 SnakeFilter( ) : vtkPolyDataAlgorithm( )
 {
     this->RefreshEvent = vtkCommand::UserEvent - 1;
+    threshold = 1e-1;
 }
 
 // -------------------------------------------------------------------------
@@ -54,23 +55,29 @@ RequestData(
     int N = in_points->GetNumberOfPoints( );
     int ii = 0;
     //TODO cambiar para que sea con promedio de movimiento
-    while( ii < 800 ) {
+    double avgMovement = 10000;
+    double auxX, auxY;
+    while( avgMovement > threshold ) {
+        avgMovement = 0.0;
         out_points = vtkPoints::New( );
         out_lines = vtkCellArray::New( );
         out_verts = vtkCellArray::New( );
+
         for(unsigned long i = 0; i < N; i++) {
             currP[0] = in_points->GetPoint(i)[0];
             currP[1] = in_points->GetPoint(i)[1];
-            //std::cout << "curr " << currP[0] << " " << currP[1] << std::endl;
-            //TODO add image and external forces
-            currP[0] += internalForce_x(i, in_points) + imageForce_x(i, in_points);
-            currP[1] += internalForce_y(i, in_points) + imageForce_y(i, in_points);
 
+            auxX = internalForce_x(i, in_points) + imageForce_x(i, in_points);
+            auxY = internalForce_y(i, in_points) + imageForce_y(i, in_points);
+
+            avgMovement += sqrt(auxX*auxX + auxY*auxY);
+            currP[0] += auxX;
+            currP[1] += auxY;
             out_points->InsertNextPoint(currP);
         }
+        avgMovement /= (double)N;
 
-
-
+        std::cout << "avg " << avgMovement << " thre " << threshold << std::endl;
         for( unsigned int i = 0; i < N - 1; ++i ) {
             out_verts->InsertNextCell( 1 );
             out_verts->InsertCellPoint( i );
@@ -92,6 +99,8 @@ RequestData(
         in_points = out_points;
         ii++;
     }
+
+    std::cout << "----end---" << std::endl;
     return 1;
 }
 
@@ -192,6 +201,19 @@ double SnakeFilter::curvatureForce_y(int i, vtkPoints* in_points) {
 void SnakeFilter::setGradientComponents(vtkDataArray* x, vtkDataArray* y) {
     xGradient = x;
     yGradient = y;
+    hiGradx = 0;
+    hiGrady = 0;
+    double currx, curry;
+    for(int id = 0; id < imageHeight*imageWidth; id++){
+        currx = fabs(xGradient->GetTuple1(id));
+        if(currx> hiGradx)
+            hiGradx = currx;
+
+        curry = fabs(yGradient->GetTuple1(id));
+        if(curry > hiGrady)
+            hiGrady = curry;
+    }
+    std::cout << "highest " << hiGradx << " " << hiGrady << std::endl;
 }
 
 void SnakeFilter::setImageSize(int height, int width) {
@@ -209,11 +231,15 @@ int SnakeFilter::getNextPointId(int i, int N) {
 }
 
 double SnakeFilter::imageForce_x(int i, vtkPoints* in_points) {
-    return line_weight * getImageGradient_x(i, in_points);
+    double gradx = getImageGradient_x(i, in_points);
+    // std::cout << "en x " << gradx << " " << hiGradx << ": " << ( gradx / hiGradx) << std::endl;
+    return line_weight * ( gradx / hiGradx);
 }
 
 double SnakeFilter::imageForce_y(int i, vtkPoints* in_points) {
-    return line_weight * getImageGradient_y(i, in_points);
+    double grady = getImageGradient_y(i, in_points);
+    // std::cout << "en y " << ( grady / hiGrady) << std::endl;
+    return line_weight * ( grady / hiGrady);
 }
 
 double SnakeFilter::getImageGradient_x(int i, vtkPoints* in_points) {
