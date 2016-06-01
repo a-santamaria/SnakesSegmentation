@@ -16,7 +16,7 @@
 #include <vtkCellArray.h>
 #include <vector>
 #include "point.h"
-#include "snakes.h"
+#include "snakeFilter.h"
 
 
 // Define interaction style
@@ -152,7 +152,7 @@ int main(int, char *[])
     //renderWindow->Render();
     renderWindowInteractor->Initialize();
 
-    Snake s(points, 0.001, 0.001);
+    SnakeFilter s(points, 0.001, 0.001);
 
     double newCoordinates[3] = { 0.0,  0.0, 0.0 };
     int cont = 0;
