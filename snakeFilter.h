@@ -42,6 +42,8 @@ public:
     vtkTypeMacro( SnakeFilter,vtkPolyDataAlgorithm );
     static SnakeFilter* New( );
 
+    int RefreshEvent;
+    
 protected:
     SnakeFilter( );
     virtual ~SnakeFilter( );

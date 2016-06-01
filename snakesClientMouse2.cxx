@@ -25,25 +25,14 @@
 #include <vtkImageExtractComponents.h>
 #include <vtkPointData.h>
 #include <vtkDataArray.h>
+#include <vtkCallbackCommand.h>
+#include <vtkParametricFunctionSource.h>
+#include <vtkParametricSpline.h>
 
 #include "snakeFilter.h"
-
+#include "snakeObserver.h"
 
 #define CANVAS_SIZE 500
-
-// -------------------------------------------------------------------------
-struct ActorMiniPipeline
-{
-    vtkSmartPointer< vtkPolyDataMapper > Mapper;
-    vtkSmartPointer< vtkActor > Actor;
-    void Configure( vtkPolyData* data )
-    {
-        this->Mapper = vtkSmartPointer< vtkPolyDataMapper >::New( );
-        this->Actor = vtkSmartPointer< vtkActor >::New( );
-        this->Mapper->SetInputData( data );
-        this->Actor->SetMapper( this->Mapper );
-    }
-};
 
 // -------------------------------------------------------------------------
 int main( int argc, char* argv[] )
@@ -126,7 +115,7 @@ int main( int argc, char* argv[] )
     // std::cout << "range " << xRange[0] << " " << xRange[1] << std::endl;
     // std::cout << "numer of tuples " << nT << std::endl;
 
-
+    //TODO change to read image like vision
     if(argv[1][tam-3] == 'j') readerJPG->Update();
     else                      readerPNG->Update();
 
@@ -151,10 +140,6 @@ int main( int argc, char* argv[] )
     {
         for( unsigned int j = 0; j < dims[1]; ++j )
         {
-        //   canvas->SetScalarComponentFromFloat( i, j, 0, 0, 100 );
-        //   canvas->SetScalarComponentFromFloat( i, j, 0, 1, 100 );
-        //   canvas->SetScalarComponentFromFloat( i, j, 0, 2, 100 );
-        //   canvas->SetScalarComponentFromFloat( i, j, 0, 3, 128 );
           int pixel = originalImage->GetScalarComponentAsDouble(i, j, 0, 0);
           canvas->SetScalarComponentFromFloat( i, j, 0, 0, pixel );
           canvas->SetScalarComponentFromFloat( i, j, 0, 1, pixel );
@@ -170,7 +155,7 @@ int main( int argc, char* argv[] )
     canvas_actor->GetMapper( )->SetInputData( canvas );
     canvas_actor->SetDisplayExtent( canvas->GetExtent( ) );
 
-    // 2. Prepare an outline
+    // Prepare an outline
     vtkSmartPointer< vtkOutlineSource > outline =
     vtkSmartPointer< vtkOutlineSource >::New( );
     outline->SetBounds( canvas->GetBounds( ) );
@@ -180,7 +165,7 @@ int main( int argc, char* argv[] )
     outline_actor.Actor->GetProperty( )->SetColor( 1, 0, 0 );
     outline_actor.Actor->GetProperty( )->SetLineWidth( 2 );
 
-    // 3. Prepare interaction objects
+    // Prepare interaction objects
     vtkSmartPointer< vtkImageActorPointPlacer > placer =
     vtkSmartPointer< vtkImageActorPointPlacer >::New( );
     placer->SetImageActor( canvas_actor );
@@ -192,7 +177,7 @@ int main( int argc, char* argv[] )
     vtkSmartPointer< vtkSeedRepresentation >::New( );
     seed_rep->SetHandleRepresentation( hnd_rep );
 
-    // 4. Show data
+    // Show data
     vtkSmartPointer< vtkRenderer > ren =
     vtkSmartPointer< vtkRenderer >::New( );
     vtkSmartPointer< vtkRenderWindow > win =
@@ -202,13 +187,13 @@ int main( int argc, char* argv[] )
        vtkSmartPointer< vtkRenderWindowInteractor >::New( );
     iren->SetRenderWindow( win );
 
-    // 5. Prepare interactors
+    // Prepare interactors
     vtkSmartPointer< vtkSeedWidget > seed_wdg =
     vtkSmartPointer< vtkSeedWidget >::New( );
     seed_wdg->SetInteractor( iren );
     seed_wdg->SetRepresentation( seed_rep );
 
-    // 6. Start all and wait for execution
+    // Start all and wait for execution
     ren->AddActor( canvas_actor );
     ren->AddActor( outline_actor.Actor );
     iren->Initialize( );
@@ -218,7 +203,7 @@ int main( int argc, char* argv[] )
     iren->Start( );
 
 
-    // 7. Create input polydata
+    // Create input polydata
     vtkSmartPointer< vtkPoints > input_points =
     vtkSmartPointer< vtkPoints >::New( );
     vtkSmartPointer< vtkCellArray > input_verts =
@@ -233,7 +218,32 @@ int main( int argc, char* argv[] )
 
     } // rof
 
-    // 8. Prepare input polydata visualization
+    // spline
+    vtkSmartPointer<vtkParametricSpline> spline =
+    vtkSmartPointer<vtkParametricSpline>::New();
+    spline->SetPoints(input_points);
+
+    vtkSmartPointer<vtkParametricFunctionSource> functionSource =
+        vtkSmartPointer<vtkParametricFunctionSource>::New();
+    functionSource->SetParametricFunction(spline);
+    functionSource->Update();
+
+    // Setup actor and mapper
+    vtkSmartPointer<vtkPolyDataMapper> mapper_spline =
+        vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper_spline->SetInputConnection(functionSource->GetOutputPort());
+
+    vtkSmartPointer<vtkActor> actor_spline =
+        vtkSmartPointer<vtkActor>::New();
+    actor_spline->SetMapper(mapper_spline);
+
+    ren->AddActor(actor_spline);
+
+    win->Render();
+    seed_wdg->Off( );
+    iren->Start( );
+
+    // Prepare input polydata visualization
     vtkSmartPointer< vtkPolyData > input_data =
     vtkSmartPointer< vtkPolyData >::New( );
     input_data->SetPoints( input_points );
@@ -249,8 +259,14 @@ int main( int argc, char* argv[] )
     snake->setGradientComponents(xGradient, yGradient);
     snake->setImageSize(dims[0], dims[1]);
     snake->SetInputData( input_data );
-    snake->Update( );
 
+    vtkSmartPointer<vtkCallbackCommand> callback =
+        vtkSmartPointer<vtkCallbackCommand>::New();
+    SnakeObserver* sObserver = new SnakeObserver(canvas_actor);
+    callback->SetCallback(sObserver->CallbackFunction);
+    snake->AddObserver( snake->RefreshEvent, callback );
+    snake->Update( );
+    /*
     ActorMiniPipeline snake_actor;
     vtkSmartPointer<vtkPolyData> salida = snake->GetOutput( );
     snake_actor.Configure( salida );
@@ -270,7 +286,7 @@ int main( int argc, char* argv[] )
     //iren->Initialize( );
     /*ren->ResetCamera( );
     ren->Render( );
-    */
+    * /
     int ii = 0;
     while( ii < 800 ) {
         // Compute convex hull
@@ -301,7 +317,7 @@ int main( int argc, char* argv[] )
         ren->Render( );
         seed_wdg->Off( );
         iren->Start( );
-        */
+        * /
         win->RemoveRenderer( ren2 );
         win->AddRenderer( ren2 );
 
@@ -313,8 +329,10 @@ int main( int argc, char* argv[] )
         // win->Start();
         ii++;
     }
+    */
 
     return( 0 );
 }
+
 
 // eof - main.cxx
