@@ -204,24 +204,28 @@ int main( int argc, char* argv[] )
 
 
     // Create input polydata
-    vtkSmartPointer< vtkPoints > input_points =
+    vtkSmartPointer< vtkPoints > input_points_antes =
     vtkSmartPointer< vtkPoints >::New( );
-    vtkSmartPointer< vtkCellArray > input_verts =
+    vtkSmartPointer< vtkCellArray > input_verts_antes =
     vtkSmartPointer< vtkCellArray >::New( );
     for( unsigned int i = 0; i < seed_rep->GetNumberOfSeeds( ); ++i )
     {
         double pos[ 3 ];
         seed_rep->GetSeedWorldPosition( i, pos );
-        input_points->InsertNextPoint( pos );
-        input_verts->InsertNextCell( 1 );
-        input_verts->InsertCellPoint( i );
+        input_points_antes->InsertNextPoint( pos );
+        input_verts_antes->InsertNextCell( 1 );
+        input_verts_antes->InsertCellPoint( i );
 
     } // rof
 
+    input_points_antes->InsertNextPoint( input_points_antes->GetPoint(0) );
+    input_verts_antes->InsertNextCell( 1 );
+    input_verts_antes->InsertCellPoint( seed_rep->GetNumberOfSeeds( ) );
+
     // spline
     vtkSmartPointer<vtkParametricSpline> spline =
-    vtkSmartPointer<vtkParametricSpline>::New();
-    spline->SetPoints(input_points);
+        vtkSmartPointer<vtkParametricSpline>::New();
+    spline->SetPoints(input_points_antes);
 
     vtkSmartPointer<vtkParametricFunctionSource> functionSource =
         vtkSmartPointer<vtkParametricFunctionSource>::New();
@@ -236,12 +240,30 @@ int main( int argc, char* argv[] )
     vtkSmartPointer<vtkActor> actor_spline =
         vtkSmartPointer<vtkActor>::New();
     actor_spline->SetMapper(mapper_spline);
-
+    actor_spline->GetProperty( )->SetColor( 0, 0, 1 );
+    actor_spline->GetProperty( )->SetLineWidth( 10 );
     ren->AddActor(actor_spline);
 
     win->Render();
     seed_wdg->Off( );
     iren->Start( );
+
+
+    vtkSmartPointer< vtkPoints > input_points =
+    vtkSmartPointer< vtkPoints >::New( );
+    vtkSmartPointer< vtkCellArray > input_verts =
+    vtkSmartPointer< vtkCellArray >::New( );
+    int index = 0;
+    for(double t = 0.0; t < 1.0; t+=0.1) {
+        double pos[ 3 ];
+        double u[3];
+        u[0] = t;
+        double why[9];
+        spline->Evaluate(u , pos, why);
+        input_points->InsertNextPoint( pos );
+        input_verts->InsertNextCell( 1 );
+        input_verts->InsertCellPoint( index++ );
+    }
 
     // Prepare input polydata visualization
     vtkSmartPointer< vtkPolyData > input_data =
@@ -266,70 +288,6 @@ int main( int argc, char* argv[] )
     callback->SetCallback(sObserver->CallbackFunction);
     snake->AddObserver( snake->RefreshEvent, callback );
     snake->Update( );
-    /*
-    ActorMiniPipeline snake_actor;
-    vtkSmartPointer<vtkPolyData> salida = snake->GetOutput( );
-    snake_actor.Configure( salida );
-    snake_actor.Actor->GetProperty( )->SetColor( 0, 0, 1 );
-    snake_actor.Actor->GetProperty( )->SetLineWidth( 5 );
-    snake_actor.Actor->GetProperty( )->SetPointSize( 10 );
-
-    vtkSmartPointer< vtkRenderer > ren2 = vtkSmartPointer< vtkRenderer >::New();
-    ren2->AddActor( snake_actor.Actor );
-    ren2->AddActor( canvas_actor );
-    win->RemoveRenderer( ren );
-    win->AddRenderer( ren2 );
-    win->Render();
-    //iren->SetRenderWindow( win );
-    //ren->AddActor( input_data_actor.Actor );
-    //ren->AddActor( snake_actor.Actor );
-    //iren->Initialize( );
-    /*ren->ResetCamera( );
-    ren->Render( );
-    * /
-    int ii = 0;
-    while( ii < 800 ) {
-        // Compute convex hull
-
-        vtkSmartPointer< SnakeFilter > snake2 =
-        vtkSmartPointer< SnakeFilter >::New( );
-        snake2->setGradientComponents(xGradient, yGradient);
-        snake2->setImageSize(dims[0], dims[1]);
-        snake2->SetInputData( salida );
-        snake2->Update();
-
-        // Prepate convex hull diagram visualization
-        ActorMiniPipeline snake_actor;
-
-        for(int i = 0; i < snake2->GetOutput()->GetNumberOfPoints(); i++){
-          double* pos ;
-          pos = snake2->GetOutput()->GetPoint(i);
-          salida->GetPoints()->SetPoint(i, pos);
-        }
-
-        // Show results
-        //salida = snake2->GetOutput( );
-        /*
-        ren->AddActor( input_data_actor.Actor );
-        ren->AddActor( snake_actor.Actor );
-        iren->Initialize( );
-        ren->ResetCamera( );
-        ren->Render( );
-        seed_wdg->Off( );
-        iren->Start( );
-        * /
-        win->RemoveRenderer( ren2 );
-        win->AddRenderer( ren2 );
-
-        win->Render();
-        //ren2->Render();
-        // seed_wdg->Off( );
-        // //ren->Render( );
-        // win->Finalize();
-        // win->Start();
-        ii++;
-    }
-    */
 
     return( 0 );
 }
