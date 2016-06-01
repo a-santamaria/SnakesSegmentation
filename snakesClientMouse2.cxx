@@ -254,7 +254,7 @@ int main( int argc, char* argv[] )
     vtkSmartPointer< vtkCellArray > input_verts =
     vtkSmartPointer< vtkCellArray >::New( );
     int index = 0;
-    for(double t = 0.0; t < 1.0; t+=0.1) {
+    for(double t = 0.0; t < 1.0; t+=0.025) {
         double pos[ 3 ];
         double u[3];
         u[0] = t;
@@ -278,8 +278,8 @@ int main( int argc, char* argv[] )
     // Compute snake
     vtkSmartPointer< SnakeFilter > snake =
     vtkSmartPointer< SnakeFilter >::New( );
-    snake->setGradientComponents(xGradient, yGradient);
     snake->setImageSize(dims[0], dims[1]);
+    snake->setGradientComponents(xGradient, yGradient);
     snake->SetInputData( input_data );
 
     vtkSmartPointer<vtkCallbackCommand> callback =

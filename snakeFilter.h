@@ -11,20 +11,15 @@
 class SnakeFilter : public vtkPolyDataAlgorithm {
 private:
 
-    double tension = 0.001;
-    double stiffness = 0.001;
+    double tension = 0.05;
+    double stiffness = 0.1;
 
-    double line_weight = 0.1;
+    double line_weight = 8.0;
     double edge_weight;
     double term_weight;
 
-    bool fixed;
-    bool closed;
-
-    int implicit;
-
-    double atom;
-    double tick;
+    double hiGradx;
+    double hiGrady;
 
     double threshold;
 
@@ -43,7 +38,7 @@ public:
     static SnakeFilter* New( );
 
     int RefreshEvent;
-    
+
 protected:
     SnakeFilter( );
     virtual ~SnakeFilter( );
