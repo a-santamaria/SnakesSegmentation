@@ -26,6 +26,8 @@
 #include <vtkPointData.h>
 #include <vtkDataArray.h>
 #include <vtkCallbackCommand.h>
+#include <vtkParametricFunctionSource.h>
+#include <vtkParametricSpline.h>
 
 #include "snakeFilter.h"
 #include "snakeObserver.h"
@@ -215,6 +217,31 @@ int main( int argc, char* argv[] )
         input_verts->InsertCellPoint( i );
 
     } // rof
+
+    // spline
+    vtkSmartPointer<vtkParametricSpline> spline =
+    vtkSmartPointer<vtkParametricSpline>::New();
+    spline->SetPoints(input_points);
+
+    vtkSmartPointer<vtkParametricFunctionSource> functionSource =
+        vtkSmartPointer<vtkParametricFunctionSource>::New();
+    functionSource->SetParametricFunction(spline);
+    functionSource->Update();
+
+    // Setup actor and mapper
+    vtkSmartPointer<vtkPolyDataMapper> mapper_spline =
+        vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper_spline->SetInputConnection(functionSource->GetOutputPort());
+
+    vtkSmartPointer<vtkActor> actor_spline =
+        vtkSmartPointer<vtkActor>::New();
+    actor_spline->SetMapper(mapper_spline);
+
+    ren->AddActor(actor_spline);
+
+    win->Render();
+    seed_wdg->Off( );
+    iren->Start( );
 
     // Prepare input polydata visualization
     vtkSmartPointer< vtkPolyData > input_data =
