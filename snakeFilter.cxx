@@ -5,6 +5,7 @@
 #include <vtkInformationVector.h>
 #include <vtkPoints.h>
 #include <vtkSmartPointer.h>
+#include <vtkCommand.h>
 
 // -------------------------------------------------------------------------
 SnakeFilter* SnakeFilter::
@@ -14,7 +15,10 @@ New( ) {
 
 // -------------------------------------------------------------------------
 SnakeFilter::
-SnakeFilter( ) : vtkPolyDataAlgorithm( ) {}
+SnakeFilter( ) : vtkPolyDataAlgorithm( )
+{
+    this->RefreshEvent = vtkCommand::UserEvent - 1;
+}
 
 // -------------------------------------------------------------------------
 SnakeFilter::~SnakeFilter( ) {}
@@ -32,51 +36,62 @@ RequestData(
     vtkPolyData* in = vtkPolyData::SafeDownCast(
         input_info->Get( vtkDataObject::DATA_OBJECT( ) )
         );
-    vtkPoints* in_points = in->GetPoints( );
+    vtkSmartPointer<vtkPoints> in_points = in->GetPoints( );
 
     // Get output
     vtkInformation* output_info = output->GetInformationObject( 0 );
-    vtkPolyData* out = vtkPolyData::SafeDownCast(
+    vtkSmartPointer<vtkPolyData> out = vtkPolyData::SafeDownCast(
         output_info->Get( vtkDataObject::DATA_OBJECT( ) )
         );
 
     // Real output objects
-    vtkPoints* out_points = vtkPoints::New( );
-    vtkCellArray* out_lines = vtkCellArray::New( );
-    vtkCellArray* out_verts = vtkCellArray::New( );
+    vtkSmartPointer<vtkPoints> out_points;
+    vtkSmartPointer<vtkCellArray> out_lines;
+    vtkSmartPointer<vtkCellArray> out_verts;
 
     double currP[3];
     currP[2] = 0;
     int N = in_points->GetNumberOfPoints( );
-    //std::cout << "number of points " << N << std::endl;
-    for(unsigned long i = 0; i < N; i++) {
-        currP[0] = in_points->GetPoint(i)[0];
-        currP[1] = in_points->GetPoint(i)[1];
-        //std::cout << "curr " << currP[0] << " " << currP[1] << std::endl;
-        //TODO add image and external forces
-        currP[0] += internalForce_x(i, in_points);
-        currP[1] += internalForce_y(i, in_points);
+    int ii = 0;
+    //TODO cambiar para que sea con promedio de movimiento
+    while( ii < 800 ) {
+        out_points = vtkPoints::New( );
+        out_lines = vtkCellArray::New( );
+        out_verts = vtkCellArray::New( );
+        for(unsigned long i = 0; i < N; i++) {
+            currP[0] = in_points->GetPoint(i)[0];
+            currP[1] = in_points->GetPoint(i)[1];
+            //std::cout << "curr " << currP[0] << " " << currP[1] << std::endl;
+            //TODO add image and external forces
+            currP[0] += internalForce_x(i, in_points) + imageForce_x(i, in_points);
+            currP[1] += internalForce_y(i, in_points) + imageForce_y(i, in_points);
 
-        out_points->InsertNextPoint(currP);
-    }
+            out_points->InsertNextPoint(currP);
+        }
 
-    for( unsigned int i = 0; i < N - 1; ++i ) {
-        out_verts->InsertNextCell( 1 );
-        out_verts->InsertCellPoint( i );
 
+
+        for( unsigned int i = 0; i < N - 1; ++i ) {
+            out_verts->InsertNextCell( 1 );
+            out_verts->InsertCellPoint( i );
+
+            out_lines->InsertNextCell( 2 );
+            out_lines->InsertCellPoint( i );
+            out_lines->InsertCellPoint( i+1 );
+
+        }
         out_lines->InsertNextCell( 2 );
-        out_lines->InsertCellPoint( i );
-        out_lines->InsertCellPoint( i+1 );
+        out_lines->InsertCellPoint( (unsigned int)(N-1) );
+        out_lines->InsertCellPoint( (unsigned int)0 );
 
+
+        out->SetPoints( out_points );
+        out->SetLines( out_lines );
+        out->SetVerts( out_verts );
+        this->InvokeEvent(this->RefreshEvent, NULL);
+        in_points = out_points;
+        ii++;
     }
-    out_lines->InsertNextCell( 2 );
-    out_lines->InsertCellPoint( (unsigned int)(N-1) );
-    out_lines->InsertCellPoint( (unsigned int)0 );
-
-
-    out->SetPoints( out_points );
-    out->SetLines( out_lines );
-    out->SetVerts( out_verts );
     return 1;
 }
 
@@ -97,16 +112,7 @@ SnakeFilter::SnakeFilter(std::vector<Point> _points, double _tension, double _st
 std::vector<Point> SnakeFilter::getPoints() {
     return points;
 }
-/*
-void SnakeFilter::update() {
-    for(int i = 0; i < points.size(); i++) {
-        //TODO add image and external forces
-        movedPoints[i].x = points[i].x + internalForce_x(i);
-        movedPoints[i].y = points[i].y + internalForce_y(i);
-    }
-    points = movedPoints;
-}
-*/
+
 double SnakeFilter::internalForce_x(int i, vtkPoints* in_points) {
     return  tension   * continuityForce_x(i, in_points) +
             stiffness * curvatureForce_x(i, in_points);
@@ -183,6 +189,16 @@ double SnakeFilter::curvatureForce_y(int i, vtkPoints* in_points) {
     return  dy4;
 }
 
+void SnakeFilter::setGradientComponents(vtkDataArray* x, vtkDataArray* y) {
+    xGradient = x;
+    yGradient = y;
+}
+
+void SnakeFilter::setImageSize(int height, int width) {
+    imageHeight = height;
+    imageWidth = width;
+}
+
 int SnakeFilter::getPrevPointId(int i, int N) {
     if(i-1 == -1) return N-1;
     else         return i-1;
@@ -190,4 +206,33 @@ int SnakeFilter::getPrevPointId(int i, int N) {
 
 int SnakeFilter::getNextPointId(int i, int N) {
     return (i+1) % N;
+}
+
+double SnakeFilter::imageForce_x(int i, vtkPoints* in_points) {
+    return line_weight * getImageGradient_x(i, in_points);
+}
+
+double SnakeFilter::imageForce_y(int i, vtkPoints* in_points) {
+    return line_weight * getImageGradient_y(i, in_points);
+}
+
+double SnakeFilter::getImageGradient_x(int i, vtkPoints* in_points) {
+    double x = in_points->GetPoint(i)[0];
+    double y = in_points->GetPoint(i)[1];
+    int id = getIdImageAt( round(x), round(y) );
+    assert(id < imageHeight*imageWidth);
+    return xGradient->GetTuple1(id);
+}
+
+double SnakeFilter::getImageGradient_y(int i, vtkPoints* in_points) {
+    double x = in_points->GetPoint(i)[0];
+    double y = in_points->GetPoint(i)[1];
+    int id = getIdImageAt( round(x), round(y) );
+    assert(id < imageHeight*imageWidth);
+    return yGradient->GetTuple1(id);
+}
+
+int SnakeFilter::getIdImageAt(int x, int y) {
+    //TODO revisar que no se pase
+    return (y * imageWidth) + x;
 }

@@ -17,51 +17,145 @@
 #include <vtkSeedRepresentation.h>
 #include <vtkSeedWidget.h>
 #include <vtkSmartPointer.h>
-#include "snakeFilter.h"
 
+#include <vtkJPEGReader.h>
+#include <vtkPNGReader.h>
+#include <vtkImageRGBToHSV.h>
+#include <vtkImageGradient.h>
+#include <vtkImageExtractComponents.h>
+#include <vtkPointData.h>
+#include <vtkDataArray.h>
+#include <vtkCallbackCommand.h>
+#include <vtkParametricFunctionSource.h>
+#include <vtkParametricSpline.h>
+
+#include "snakeFilter.h"
+#include "snakeObserver.h"
 
 #define CANVAS_SIZE 500
 
 // -------------------------------------------------------------------------
-struct ActorMiniPipeline
-{
-    vtkSmartPointer< vtkPolyDataMapper > Mapper;
-    vtkSmartPointer< vtkActor > Actor;
-    void Configure( vtkPolyData* data )
-    {
-        this->Mapper = vtkSmartPointer< vtkPolyDataMapper >::New( );
-        this->Actor = vtkSmartPointer< vtkActor >::New( );
-        this->Mapper->SetInputData( data );
-        this->Actor->SetMapper( this->Mapper );
-    }
-};
-
-// -------------------------------------------------------------------------
 int main( int argc, char* argv[] )
 {
-    // 1. Create a drawing canvas
-    vtkSmartPointer< vtkImageData > canvas =
-    vtkSmartPointer< vtkImageData >::New( );
-    canvas->SetExtent( 0, CANVAS_SIZE, 0, CANVAS_SIZE, 0, 0 );
+    //read image
+    vtkSmartPointer<vtkImageData> originalImage =
+        vtkSmartPointer<vtkImageData>::New();
+    vtkSmartPointer<vtkImageData> image =
+        vtkSmartPointer<vtkImageData>::New();
+
+    // Verify input arguments
+    if ( argc < 2 )
+    {
+        std::cout << "Usage: " << argv[0]
+              << " Filename(.png .jpg)" << std::endl;
+              return EXIT_FAILURE;
+    }
+
+    // Read the image
+    vtkSmartPointer<vtkJPEGReader> readerJPG =
+    vtkSmartPointer<vtkJPEGReader>::New();
+    vtkSmartPointer<vtkPNGReader> readerPNG =
+    vtkSmartPointer<vtkPNGReader>::New();
+    int tam = strlen(argv[1]);
+    if(argv[1][tam-3] == 'j')
+        readerJPG->SetFileName(argv[1]);
+    else if (argv[1][tam-3] == 'p')
+        readerPNG->SetFileName(argv[1]);
+    else {
+        std::cerr << "wrong extention most be jpg or png" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    // Convert to HSV and extract the Value
+    vtkSmartPointer<vtkImageRGBToHSV> hsvFilter =
+        vtkSmartPointer<vtkImageRGBToHSV>::New();
+    if(argv[1][tam-3] == 'j')
+        hsvFilter->SetInputConnection(readerJPG->GetOutputPort());
+    else
+        hsvFilter->SetInputConnection(readerPNG->GetOutputPort());
+
+    vtkSmartPointer<vtkImageExtractComponents> extractValue =
+      vtkSmartPointer<vtkImageExtractComponents>::New();
+    extractValue->SetInputConnection(hsvFilter->GetOutputPort());
+    extractValue->SetComponents(2);
+    extractValue->Update();
+    image = extractValue->GetOutput();
+
+    // Compute the gradient of the Value
+    vtkSmartPointer<vtkImageGradient> gradientFilter =
+        vtkSmartPointer<vtkImageGradient>::New();
+    /*const char resultName[] = "resultGrad";
+    gradientFilter->SetResultArrayName(resultName);
+    */
+    gradientFilter->SetInputData(image);
+    gradientFilter->SetDimensionality(2);
+    gradientFilter->Update();
+
+    vtkImageData* outputGradient = gradientFilter->GetOutput();
+
+    // Extract the x component of the gradient
+    vtkSmartPointer<vtkImageExtractComponents> extractXFilter =
+        vtkSmartPointer<vtkImageExtractComponents>::New();
+    extractXFilter->SetComponents(0);
+    extractXFilter->SetInputConnection(gradientFilter->GetOutputPort());
+    extractXFilter->Update();
+    vtkDataArray* xGradient = extractXFilter->GetOutput()->GetPointData()->GetScalars();
+
+    // Extract the y component of the gradient
+    vtkSmartPointer<vtkImageExtractComponents> extractYFilter =
+        vtkSmartPointer<vtkImageExtractComponents>::New();
+    extractYFilter->SetComponents(1);
+    extractYFilter->SetInputConnection(gradientFilter->GetOutputPort());
+    extractYFilter->Update();
+    vtkDataArray* yGradient = extractYFilter->GetOutput()->GetPointData()->GetScalars();
+
+    // double xRange[2];
+    // xGradient->GetRange( xRange );
+    // int nT = xGradient->GetNumberOfTuples();
+    // std::cout << "range " << xRange[0] << " " << xRange[1] << std::endl;
+    // std::cout << "numer of tuples " << nT << std::endl;
+
+    //TODO change to read image like vision
+    if(argv[1][tam-3] == 'j') readerJPG->Update();
+    else                      readerPNG->Update();
+
+    vtkSmartPointer< vtkImageData > canvas = vtkSmartPointer< vtkImageData >::New();
+
+    if(argv[1][tam-3] == 'j')
+        originalImage = readerJPG->GetOutput();
+    else
+        originalImage = readerPNG->GetOutput();
+
+    int* dims = outputGradient->GetDimensions();
+    int extent[6];
+    double origin[3];
+    double spacing[3];
+    originalImage->GetOrigin( origin );
+    originalImage->GetSpacing( spacing );
+    originalImage->GetExtent( extent );
+    std::cout << "dims " << dims[0] << " "<<dims[1] << " "<<dims[2] << std::endl;
+    canvas->SetExtent( 0, dims[0], 0, dims[1], 0, 0 );
     canvas->AllocateScalars( VTK_UNSIGNED_CHAR, 4 );
-    for( unsigned int i = 0; i < CANVAS_SIZE; ++i )
+    for( unsigned int i = 0; i < dims[0]; ++i )
     {
-    for( unsigned int j = 0; j < CANVAS_SIZE; ++j )
-    {
-      canvas->SetScalarComponentFromFloat( i, j, 0, 0, 100 );
-      canvas->SetScalarComponentFromFloat( i, j, 0, 1, 100 );
-      canvas->SetScalarComponentFromFloat( i, j, 0, 2, 100 );
-      canvas->SetScalarComponentFromFloat( i, j, 0, 3, 128 );
-
+        for( unsigned int j = 0; j < dims[1]; ++j )
+        {
+          int pixel = originalImage->GetScalarComponentAsDouble(i, j, 0, 0);
+          canvas->SetScalarComponentFromFloat( i, j, 0, 0, pixel );
+          canvas->SetScalarComponentFromFloat( i, j, 0, 1, pixel );
+          canvas->SetScalarComponentFromFloat( i, j, 0, 2, pixel );
+          canvas->SetScalarComponentFromFloat( i, j, 0, 3, 255 );
+          //std::cout << pixel << std::endl;
+        } // rof
     } // rof
 
-    } // rof
+
     vtkSmartPointer< vtkImageActor > canvas_actor =
     vtkSmartPointer< vtkImageActor >::New( );
     canvas_actor->GetMapper( )->SetInputData( canvas );
     canvas_actor->SetDisplayExtent( canvas->GetExtent( ) );
 
-    // 2. Prepare an outline
+    // Prepare an outline
     vtkSmartPointer< vtkOutlineSource > outline =
     vtkSmartPointer< vtkOutlineSource >::New( );
     outline->SetBounds( canvas->GetBounds( ) );
@@ -71,7 +165,7 @@ int main( int argc, char* argv[] )
     outline_actor.Actor->GetProperty( )->SetColor( 1, 0, 0 );
     outline_actor.Actor->GetProperty( )->SetLineWidth( 2 );
 
-    // 3. Prepare interaction objects
+    // Prepare interaction objects
     vtkSmartPointer< vtkImageActorPointPlacer > placer =
     vtkSmartPointer< vtkImageActorPointPlacer >::New( );
     placer->SetImageActor( canvas_actor );
@@ -83,7 +177,7 @@ int main( int argc, char* argv[] )
     vtkSmartPointer< vtkSeedRepresentation >::New( );
     seed_rep->SetHandleRepresentation( hnd_rep );
 
-    // 4. Show data
+    // Show data
     vtkSmartPointer< vtkRenderer > ren =
     vtkSmartPointer< vtkRenderer >::New( );
     vtkSmartPointer< vtkRenderWindow > win =
@@ -93,13 +187,13 @@ int main( int argc, char* argv[] )
        vtkSmartPointer< vtkRenderWindowInteractor >::New( );
     iren->SetRenderWindow( win );
 
-    // 5. Prepare interactors
+    // Prepare interactors
     vtkSmartPointer< vtkSeedWidget > seed_wdg =
     vtkSmartPointer< vtkSeedWidget >::New( );
     seed_wdg->SetInteractor( iren );
     seed_wdg->SetRepresentation( seed_rep );
 
-    // 6. Start all and wait for execution
+    // Start all and wait for execution
     ren->AddActor( canvas_actor );
     ren->AddActor( outline_actor.Actor );
     iren->Initialize( );
@@ -108,7 +202,8 @@ int main( int argc, char* argv[] )
     seed_wdg->On( );
     iren->Start( );
 
-    // 7. Create input polydata
+
+    // Create input polydata
     vtkSmartPointer< vtkPoints > input_points =
     vtkSmartPointer< vtkPoints >::New( );
     vtkSmartPointer< vtkCellArray > input_verts =
@@ -123,7 +218,32 @@ int main( int argc, char* argv[] )
 
     } // rof
 
-    // 8. Prepare input polydata visualization
+    // spline
+    vtkSmartPointer<vtkParametricSpline> spline =
+    vtkSmartPointer<vtkParametricSpline>::New();
+    spline->SetPoints(input_points);
+
+    vtkSmartPointer<vtkParametricFunctionSource> functionSource =
+        vtkSmartPointer<vtkParametricFunctionSource>::New();
+    functionSource->SetParametricFunction(spline);
+    functionSource->Update();
+
+    // Setup actor and mapper
+    vtkSmartPointer<vtkPolyDataMapper> mapper_spline =
+        vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper_spline->SetInputConnection(functionSource->GetOutputPort());
+
+    vtkSmartPointer<vtkActor> actor_spline =
+        vtkSmartPointer<vtkActor>::New();
+    actor_spline->SetMapper(mapper_spline);
+
+    ren->AddActor(actor_spline);
+
+    win->Render();
+    seed_wdg->Off( );
+    iren->Start( );
+
+    // Prepare input polydata visualization
     vtkSmartPointer< vtkPolyData > input_data =
     vtkSmartPointer< vtkPolyData >::New( );
     input_data->SetPoints( input_points );
@@ -133,31 +253,48 @@ int main( int argc, char* argv[] )
     input_data_actor.Actor->GetProperty( )->SetColor( 0, 1, 0 );
     input_data_actor.Actor->GetProperty( )->SetPointSize( 20 );
 
-    // Compute convex hull
+    // Compute snake
     vtkSmartPointer< SnakeFilter > snake =
     vtkSmartPointer< SnakeFilter >::New( );
+    snake->setGradientComponents(xGradient, yGradient);
+    snake->setImageSize(dims[0], dims[1]);
     snake->SetInputData( input_data );
-    snake->Update( );
 
+    vtkSmartPointer<vtkCallbackCommand> callback =
+        vtkSmartPointer<vtkCallbackCommand>::New();
+    SnakeObserver* sObserver = new SnakeObserver(canvas_actor);
+    callback->SetCallback(sObserver->CallbackFunction);
+    snake->AddObserver( snake->RefreshEvent, callback );
+    snake->Update( );
+    /*
     ActorMiniPipeline snake_actor;
     vtkSmartPointer<vtkPolyData> salida = snake->GetOutput( );
     snake_actor.Configure( salida );
     snake_actor.Actor->GetProperty( )->SetColor( 0, 0, 1 );
     snake_actor.Actor->GetProperty( )->SetLineWidth( 5 );
     snake_actor.Actor->GetProperty( )->SetPointSize( 10 );
-    iren->SetRenderWindow( win );
+
+    vtkSmartPointer< vtkRenderer > ren2 = vtkSmartPointer< vtkRenderer >::New();
+    ren2->AddActor( snake_actor.Actor );
+    ren2->AddActor( canvas_actor );
+    win->RemoveRenderer( ren );
+    win->AddRenderer( ren2 );
+    win->Render();
+    //iren->SetRenderWindow( win );
     //ren->AddActor( input_data_actor.Actor );
-    ren->AddActor( snake_actor.Actor );
-    iren->Initialize( );
+    //ren->AddActor( snake_actor.Actor );
+    //iren->Initialize( );
     /*ren->ResetCamera( );
     ren->Render( );
-    */
+    * /
     int ii = 0;
     while( ii < 800 ) {
         // Compute convex hull
 
         vtkSmartPointer< SnakeFilter > snake2 =
         vtkSmartPointer< SnakeFilter >::New( );
+        snake2->setGradientComponents(xGradient, yGradient);
+        snake2->setImageSize(dims[0], dims[1]);
         snake2->SetInputData( salida );
         snake2->Update();
 
@@ -180,14 +317,22 @@ int main( int argc, char* argv[] )
         ren->Render( );
         seed_wdg->Off( );
         iren->Start( );
-        */    seed_wdg->Off( );
-        //ren->Render( );
-        win->Finalize();
-        win->Start();
+        * /
+        win->RemoveRenderer( ren2 );
+        win->AddRenderer( ren2 );
+
+        win->Render();
+        //ren2->Render();
+        // seed_wdg->Off( );
+        // //ren->Render( );
+        // win->Finalize();
+        // win->Start();
         ii++;
     }
+    */
 
     return( 0 );
 }
+
 
 // eof - main.cxx
