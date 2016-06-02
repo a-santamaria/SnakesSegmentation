@@ -182,6 +182,7 @@ int main( int argc, char* argv[] )
     vtkSmartPointer< vtkRenderer >::New( );
     vtkSmartPointer< vtkRenderWindow > win =
     vtkSmartPointer< vtkRenderWindow >::New( );
+    win->SetSize(700, 700);
     win->AddRenderer( ren );
     vtkSmartPointer< vtkRenderWindowInteractor > iren =
        vtkSmartPointer< vtkRenderWindowInteractor >::New( );
@@ -288,7 +289,8 @@ int main( int argc, char* argv[] )
     callback->SetCallback(sObserver->CallbackFunction);
     snake->AddObserver( snake->RefreshEvent, callback );
     snake->Update( );
-
+    int nn;
+    cin>>nn;
     return( 0 );
 }
 

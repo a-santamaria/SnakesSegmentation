@@ -15,6 +15,7 @@ SnakeObserver::SnakeObserver(vtkSmartPointer< vtkImageActor > canvas_actor)
     ren2->AddActor( snake_actor.Actor );
     ren2->AddActor( canvas_actor );
     win->AddRenderer( ren2 );
+    win->SetSize(700, 700);
 }
 
 void SnakeObserver::CallbackFunction(vtkObject* caller,

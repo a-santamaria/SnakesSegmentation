@@ -246,7 +246,7 @@ double SnakeFilter::getImageGradient_x(int i, vtkPoints* in_points) {
     double x = in_points->GetPoint(i)[0];
     double y = in_points->GetPoint(i)[1];
     int id = getIdImageAt( round(x), round(y) );
-    assert(id < imageHeight*imageWidth);
+    if(id >= imageHeight*imageWidth || i < 0) return 0;
     return xGradient->GetTuple1(id);
 }
 
@@ -254,7 +254,7 @@ double SnakeFilter::getImageGradient_y(int i, vtkPoints* in_points) {
     double x = in_points->GetPoint(i)[0];
     double y = in_points->GetPoint(i)[1];
     int id = getIdImageAt( round(x), round(y) );
-    assert(id < imageHeight*imageWidth);
+    if(id >= imageHeight*imageWidth || i < 0) return 0;
     return yGradient->GetTuple1(id);
 }
 
